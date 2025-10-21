@@ -1,134 +1,148 @@
-#!/bin/bash
-
-# === Signup & Login ===
-declare -A users
-users=( ["mehdi"]="1234" ["sara"]="abcd" )
-
-attempts=3
-logged_in=false
-
-while [ $attempts -gt 0 ]; do
-    read -p "Username: " username
-    read -sp "Password: " password
-    echo
-    if [[ ${users[$username]} == "$password" ]]; then
-        echo "Welcome, $username!"
-        logged_in=true
-        break
-    else
-        echo "Invalid login. Try again."
-        ((attempts--))
-    fi
-done
-
-if ! $logged_in; then
-    echo "Too many failed attempts. Exiting..."
-    exit 1
-fi
-
-# === Game setup ===
+room=5
+level=1
+gold=300
 health=100
-gold=0
-rooms=5
-history=()
 
-echo "You enter the jungle... Health=$health, Gold=$gold"
-
-for ((i=1; i<=rooms; i++)); do
+while [ $room -gt 0 ]
+do
+    read -p "please enter your username : " username
     echo
-    echo "---- Room $i ----"
-    event=$((RANDOM % 3)) 
 
-    case $event in
-        0) # Monster
-            echo "A wild monster appears!"
-            read -p "Do you want to fight or run? (fight/run): " choice
-            if [[ $choice == "fight" ]]; then
-                player_dmg=$((RANDOM % 30 + 1))
-                monster_dmg=$((RANDOM % 30 + 1))
-                health=$((health - monster_dmg))
-                echo "You dealt $player_dmg damage but lost $monster_dmg HP."
-                if ((health <= 0)); then
-                    history+=("Room $i: Fought monster → Died")
-                    echo "GAME OVER! "
-                    exit
-                else
-                    history+=("Room $i: Fought monster → Survived with $health HP")
-                fi
-            else
-                history+=("Room $i: Ran away from monster")
-                echo "You escaped safely."
+    if [[ -z $username ]]
+    then
+        echo "input is empty!"
+        echo
+    elif [[ -n $username ]]
+    then
+        echo "welcome to the jungle game $username !!"
+        echo
+
+        PS3="a random level gonna be choosed (room $level) : "
+        options=("fight a monster" "claim a treasure" "get rekt on a trap")
+        random=$((RANDOM % ${#options[@]}))
+        selected="${options[$random]}"
+
+        echo "The jungle judged you to : $selected"
+        echo
+
+        select opt in "${options[@]}"
+        do
+            if [[ $selected == "fight a monster" ]]
+            then
+                echo "A monster appeared!"
+                options=("attack" "run away")
+                select fight in "${options[@]}"
+                do
+                    case $fight in
+                        "attack")
+                            dmg=$((RANDOM % 30 + 10))
+                            health=$((health - dmg))
+                            echo "You fought bravely but lost $dmg HP, health left: $health"
+                            ;;
+                        "run away")
+                            echo "You ran away but survived."
+                            ;;
+                        *)
+                            echo "invalid choice"
+                            ;;
+                    esac
+                    break
+                done
+                ((room--))
+                ((level++))
+                break
             fi
-            ;;
-        1) # Treasure
-            gold_found=$((RANDOM % 50 + 10))
-            gold=$((gold + gold_found))
-            echo "You found $gold_found gold! Total gold: $gold"
-            history+=("Room $i: Found $gold_found gold (Total=$gold)")
-            ;;
-        2) # Trap
-            trap_dmg=$((RANDOM % 30 + 10))
-            health=$((health - trap_dmg))
-            echo "A trap! You lost $trap_dmg HP. Remaining HP=$health"
-            if ((health <= 0)); then
-                history+=("Room $i: Trap killed you")
-                echo "GAME OVER! "
-                exit
-            else
-                history+=("Room $i: Trap → Lost $trap_dmg HP, HP=$health")
+
+            if [[ $selected == "claim a treasure" ]]
+            then
+                gain=$((RANDOM % 50 + 10))
+                gold=$((gold + gain))
+                echo "You found $gain gold! total gold: $gold"
+                ((room--))
+                ((level++))
+                break
             fi
-            ;;
-    esac
-done
 
-# === Final Boss ===
-echo
-echo "You survived all rooms... but a GUARD blocks your path!"
-echo "Options:"
-echo "a) Bribe the guard (50 gold)"
-echo "b) Fight the guard"
-echo "c) Sneak past (50% chance)"
+            if [[ $selected == "get rekt on a trap" ]]
+            then
+                options=("u lost ur -25 of health" "u lost -50 of ur health" "u lost all ur health")
+                random_health=$((RANDOM % ${#options[@]}))
+                damage="${options[$random_health]}"
+                echo "Trap triggered: $damage"
 
-read -p "Choose your action (a/b/c): " action
-case $action in
-    a)
-        if ((gold >= 50)); then
-            echo "You bribed the guard with 50 gold. You win! "
-            history+=("Bribed guard with 50 gold → Victory")
-        else
-            echo "Not enough gold! The guard kills you. "
-            history+=("Tried to bribe guard but failed → Death")
-        fi
-        ;;
-    b)
-        guard_hp=$((RANDOM % 50 + 50))
-        if ((health > guard_hp)); then
-            echo "You fought bravely and defeated the guard! "
-            history+=("Fought guard (HP=$guard_hp) → Victory")
-        else
-            echo "The guard was too strong. You died. "
-            history+=("Fought guard (HP=$guard_hp) → Death")
-        fi
-        ;;
-    c)
-        chance=$((RANDOM % 2))
-        if ((chance == 0)); then
-            echo "You snuck past the guard successfully!"
-            history+=("Sneaked past guard → Victory")
-        else
-            echo "You got caught sneaking. The guard kills you."
-            history+=("Sneak attempt failed → Death")
-        fi
-        ;;
-    *)
-        echo "Invalid choice. The guard kills you. "
-        history+=("Invalid guard choice → Death")
-        ;;
-esac
+                case $damage in
+                    "u lost all ur health")
+                        echo "GAME OVER!"
+                        exit
+                        ;;
+                    "u lost ur -25 of health")
+                        health=$((health - 25))
+                        echo "you have $health health left"
+                        ;;
+                    "u lost -50 of ur health")
+                        health=$((health - 50))
+                        echo "you have $health health left"
+                        ;;
+                esac
+                ((room--))
+                ((level++))
+                break
+            fi
+        done
 
-# === Show History ===
-echo
-echo "===== Adventure History ====="
-for entry in "${history[@]}"; do
-    echo "$entry"
+        if [[ $room -eq 0 ]]
+        then
+            echo
+            echo "You survived the jungle but COACH MEHDI blocks the way and said:"
+            echo "\"listen here you little warrior, your journey has ended.\""
+            echo
+
+            PS3="Choose your path warrior : "
+            options=(
+                "gimme a 50 gold bash ndir 3in mika"
+                "fight me"
+                "a 50% chance to sneak past me if not you gonna DIE"
+            )
+
+            select opt in "${options[@]}"
+            do
+                case $opt in
+                    "gimme a 50 gold bash ndir 3in mika")
+                        if (( gold >= 50 )); then
+                            gold=$((gold - 50))
+                            echo "You bribed the coach with 50 gold."
+                            echo "Congrats, you won!"
+                            exit
+                        else
+                            echo "Not enough gold. The coach finished you."
+                            exit
+                        fi
+                        ;;
+                    "fight me")
+                        coach=$((RANDOM % 80 + 20))
+                        if ((health > coach)); then
+                            echo "You actually defeated Coach Mehdi."
+                            echo "Victory!"
+                        else
+                            echo "Coach Mehdi defeated you."
+                        fi
+                        exit
+                        ;;
+                    "a 50% chance to sneak past me if not you gonna DIE")
+                        chance=$((RANDOM % 2))
+                        if ((chance == 0)); then
+                            echo "You sneaked past him successfully."
+                            echo "You win!"
+                        else
+                            echo "Coach Mehdi caught you. Game over."
+                        fi
+                        exit
+                        ;;
+                    *)
+                        echo "invalid choice"
+                        ;;
+                esac
+            done
+        fi
+    fi
 done
