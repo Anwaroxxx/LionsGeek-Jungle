@@ -45,4 +45,4 @@ Learning Bash gave me a deeper understanding of what happens “under the hood�
 **Anwar Azarzou**  
 🎓 Student at [LionsGeek](https://lionsgeek.com)  
 💬 Passionate about development, problem-solving, and technology  
-📫 [GitHub](https://github.com/Anwar-Azarzou)
+📫 [GitHub](https://github.com/Anwaroxxx)
